@@ -1,0 +1,69 @@
+Program.Sub.Preflight.Start
+v.Global.sLogFile.Declare
+v.Global.sLog.Declare
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+'Robert Cole 07/19/2021
+'Added/ Changed:
+f.Intrinsic.Control.Try
+V.Local.sError.Declare
+
+v.Local.bRet.Declare
+
+f.Intrinsic.Control.CallSub(Quote_Timestamp)
+
+f.Intrinsic.Control.End
+
+f.Intrinsic.Control.Catch
+	f.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+	f.Intrinsic.String.Build("{0}{1} {2} - {3}",v.Ambient.NewLine,v.Ambient.Date,v.Ambient.Time,v.Local.sError,v.Global.sLog)
+	f.Intrinsic.UI.Msgbox(v.Global.sLog,"ERROR")
+f.Intrinsic.Control.EndTry
+Program.Sub.Main.End
+
+Program.Sub.Quote_Timestamp.Start
+f.Intrinsic.Control.Try
+V.Local.sError.Declare
+
+v.Local.sQTE.Declare
+v.Local.sSQL.Declare
+
+f.ODBC.Connection!conx.OpenCompanyConnection
+
+'v.passed.000003 = QUOTE-NUM (Not padded)
+'v.passed.000077 = SENT (P)
+f.Intrinsic.Control.If(v.Passed.000003,>,0)
+	f.Intrinsic.String.LPad(v.Passed.000003,"0",7,v.Local.sQTE)
+f.Intrinsic.Control.Else
+	v.Local.sQTE.Set(v.Passed.000003)
+f.Intrinsic.Control.EndIf
+
+f.Intrinsic.String.Build("select * from GCG_6435_QUOTE_STAMP where QUOTE = '{0}'",v.Local.sQTE,v.Local.sSQL)
+f.ODBC.Connection!conx.OpenLocalRecordsetRW("STAMP",v.Local.sSQL)
+
+f.Intrinsic.Control.If(v.ODBC.conx!STAMP.EOF,=,true)
+
+	f.ODBC.conx!STAMP.AddNew
+	f.ODBC.conx!STAMP.Set!QUOTE(v.Local.sQTE)
+	f.ODBC.conx!STAMP.Set!DATE_SENT(v.Ambient.Date)
+	f.ODBC.conx!STAMP.Set!TIME_SENT(v.Ambient.Time)
+	f.ODBC.conx!STAMP.Set!USER_SENT(v.Caller.User)
+	f.ODBC.conx!STAMP.Update
+	
+	v.Passed.000077.Set("P")
+	
+	f.Intrinsic.String.Build("update QUOTE_HEADER set QUOTE_TYPE = 'P' where QUOTE_NO = '{0}' and RECORD_NO = '  A'",v.Local.sQTE,v.Local.sSQL)
+	f.ODBC.Connection!conx.Execute(v.Local.sSQL)
+	
+f.Intrinsic.Control.EndIf
+
+f.ODBC.conx!STAMP.Close
+f.ODBC.Connection!conx.Close
+
+f.Intrinsic.Control.Catch
+	f.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+	f.Intrinsic.String.Build("{0}{1} {2} - {3}",v.Ambient.NewLine,v.Ambient.Date,v.Ambient.Time,v.Local.sError,v.Global.sLog)
+	f.Intrinsic.UI.Msgbox(v.Global.sLog,"ERROR")
+f.Intrinsic.Control.EndTry
+Program.Sub.Quote_Timestamp.End
